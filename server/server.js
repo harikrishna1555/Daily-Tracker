@@ -9,11 +9,18 @@ const pool = require("./db/connection");
 const authRoutes = require("./routes/auth");
 const { authenticate } = require("./middleware/authMiddleware");
 const app = express();
+const tabRoutes = require("./routes/tabRoutes");
+const activityRoutes = require("./routes/activityRoutes");
+const dailyLogRoutes = require("./routes/dailyLogRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 app.use(express.json());
 app.use(cookieParser());
 app.use(helmet());
 app.use("/api/auth", authRoutes);
-
+app.use("/api/tabs", tabRoutes);
+app.use("/api/activities", activityRoutes);
+app.use("/api/logs", dailyLogRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 app.use(
   cors({
     origin: "http://localhost:5173",
