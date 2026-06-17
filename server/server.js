@@ -17,6 +17,12 @@ const tabRoutes = require("./routes/tabRoutes");
 const activityRoutes = require("./routes/activityRoutes");
 const dailyLogRoutes = require("./routes/dailyLogRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(cookieParser());
 app.use(helmet());
@@ -27,12 +33,6 @@ app.use("/api/activities", activityRoutes);
 app.use("/api/logs", dailyLogRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/admin", adminRoutes);
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-  }),
-);
 
 app.get("/", (req, res) => {
   res.json({
