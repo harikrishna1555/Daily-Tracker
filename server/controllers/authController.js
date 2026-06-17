@@ -6,13 +6,22 @@ const {
   findUserByEmailWithPassword,
 } = require("../models/userModel");
 const crypto = require("crypto");
-const { v4: uuidv4 } = require("uuid");
+// replaced uuid.v4 usage with crypto.randomUUID()
 const {
   saveRefreshToken,
   findRefreshToken,
   revokeRefreshToken,
   revokeRefreshTokenByHash,
 } = require("../models/refreshTokenModel");
+const {
+  createPasswordReset,
+  findValidToken,
+  markTokenUsed,
+  revokeExistingTokensForUser,
+} = require("../models/passwordResetModel");
+const { sendEmail } = require("../utils/email");
+const { createAuditLog } = require("../middleware/auditMiddleware");
+const { updatePassword } = require("../models/userModel");
 const register = async (req, res) => {
   try {
     const { name, email, password } = req.body || {};
@@ -41,11 +50,22 @@ const register = async (req, res) => {
     // Create user
     const user = await createUser(name, email.toLowerCase(), passwordHash);
 
-    res.status(201).json({
-      success: true,
-      message: "User registered successfully",
-      user,
-    });
+    // audit register
+    try {
+      await createAuditLog({
+        userId: user.id,
+        action: "REGISTER",
+        tableName: "users",
+        recordId: user.id,
+        req,
+      });
+    } catch (e) {
+      console.error("Audit error:", e);
+    }
+
+    res
+      .status(201)
+      .json({ success: true, message: "User registered successfully", user });
   } catch (error) {
     console.error(error);
 
@@ -96,7 +116,7 @@ const login = async (req, res) => {
       },
     );
     // Create refresh token
-    const refreshToken = uuidv4();
+    const refreshToken = crypto.randomUUID();
 
     const refreshTokenHash = crypto
       .createHash("sha256")
@@ -107,6 +127,19 @@ const login = async (req, res) => {
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     await saveRefreshToken(user.id, refreshTokenHash, expiresAt);
+
+    // audit login
+    try {
+      await createAuditLog({
+        userId: user.id,
+        action: "LOGIN",
+        tableName: "users",
+        recordId: user.id,
+        req,
+      });
+    } catch (e) {
+      console.error("Audit error:", e);
+    }
 
     res.json({
       success: true,
@@ -199,10 +232,20 @@ const logout = async (req, res) => {
 
     await revokeRefreshTokenByHash(refreshTokenHash);
 
-    res.json({
-      success: true,
-      message: "Logged out successfully",
-    });
+    // audit logout
+    try {
+      await createAuditLog({
+        userId: req.user ? req.user.userId : null,
+        action: "LOGOUT",
+        tableName: "users",
+        recordId: req.user ? req.user.userId : null,
+        req,
+      });
+    } catch (e) {
+      console.error("Audit error:", e);
+    }
+
+    res.json({ success: true, message: "Logged out successfully" });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -210,9 +253,128 @@ const logout = async (req, res) => {
     });
   }
 };
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body || {};
+
+    if (!email) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email required" });
+    }
+
+    const user = await findUserByEmail(email.toLowerCase());
+
+    // Always respond with success message to avoid email enumeration
+    if (!user) {
+      return res.json({
+        success: true,
+        message: "If that email exists, a reset link has been sent",
+      });
+    }
+
+    // revoke existing tokens for user
+    await revokeExistingTokensForUser(user.id);
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+    // calculate expiry
+    const expiresIn = process.env.PASSWORD_RESET_TOKEN_EXPIRES || "1h";
+    const expiresAt = new Date();
+    if (expiresIn.endsWith("h")) {
+      const hours = parseInt(expiresIn.replace("h", ""), 10) || 1;
+      expiresAt.setHours(expiresAt.getHours() + hours);
+    } else {
+      expiresAt.setHours(expiresAt.getHours() + 1);
+    }
+
+    await createPasswordReset(user.id, tokenHash, expiresAt);
+
+    const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+
+    const html = `<p>Hello ${user.name},</p><p>Click the link to reset your password (expires in ${expiresIn}):</p><p><a href="${resetUrl}">${resetUrl}</a></p>`;
+
+    try {
+      await sendEmail(user.email, "Reset your password", html);
+    } catch (e) {
+      console.error("Email send failed", e);
+    }
+
+    // audit password reset request
+    try {
+      await createAuditLog({
+        userId: user.id,
+        action: "PASSWORD_RESET",
+        tableName: "password_reset_tokens",
+        recordId: null,
+        req,
+      });
+    } catch (e) {
+      console.error("Audit error:", e);
+    }
+
+    return res.json({
+      success: true,
+      message: "If that email exists, a reset link has been sent",
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body || {};
+
+    if (!token || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Token and new password are required",
+      });
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+    const stored = await findValidToken(tokenHash);
+
+    if (!stored) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid or expired token" });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const updatedUser = await updatePassword(stored.user_id, passwordHash);
+
+    await markTokenUsed(stored.id);
+
+    // audit password reset completion
+    try {
+      await createAuditLog({
+        userId: stored.user_id,
+        action: "PASSWORD_RESET",
+        tableName: "users",
+        recordId: stored.user_id,
+        req,
+      });
+    } catch (e) {
+      console.error("Audit error:", e);
+    }
+
+    res.json({ success: true, message: "Password reset successful" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
 module.exports = {
   register,
   login,
   refresh,
   logout,
+  forgotPassword,
+  resetPassword,
 };

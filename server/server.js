@@ -8,6 +8,10 @@ const { sendEmail } = require("./utils/email");
 const pool = require("./db/connection");
 const authRoutes = require("./routes/auth");
 const { authenticate } = require("./middleware/authMiddleware");
+const { auditMiddleware } = require("./middleware/auditMiddleware");
+const adminRoutes = require("./routes/adminRoutes");
+const notFound = require("./middleware/notFound");
+const errorHandler = require("./middleware/errorHandler");
 const app = express();
 const tabRoutes = require("./routes/tabRoutes");
 const activityRoutes = require("./routes/activityRoutes");
@@ -16,11 +20,13 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 app.use(express.json());
 app.use(cookieParser());
 app.use(helmet());
+app.use(auditMiddleware);
 app.use("/api/auth", authRoutes);
 app.use("/api/tabs", tabRoutes);
 app.use("/api/activities", activityRoutes);
 app.use("/api/logs", dailyLogRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/admin", adminRoutes);
 app.use(
   cors({
     origin: "http://localhost:5173",
@@ -82,6 +88,13 @@ app.get("/profile", authenticate, async (req, res) => {
 app.get("/ping", (req, res) => {
   res.json({ success: true });
 });
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.use(notFound);
+app.use(errorHandler);
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
