@@ -1,9 +1,11 @@
 import React from 'react'
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import Sidebar from '../components/Sidebar'
+import Navbar from '../components/Navbar'
 
 export default function MainLayout() {
-  const { logout, user } = useAuth()
+  const { logout } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -12,42 +14,13 @@ export default function MainLayout() {
   }
 
   return (
-    <div className="app-root">
-      <aside className="sidebar">
-        <nav>
-          <ul>
-            <li>
-              <NavLink to="/dashboard">Dashboard</NavLink>
-            </li>
-            <li>
-              <NavLink to="/tabs">Tabs</NavLink>
-            </li>
-            <li>
-              <NavLink to="/activities">Activities</NavLink>
-            </li>
-            <li>
-              <NavLink to="/daily-tracker">Daily Tracker</NavLink>
-            </li>
-            <li>
-              <NavLink to="/reports">Reports</NavLink>
-            </li>
-            <li>
-              <NavLink to="/admin">Admin</NavLink>
-            </li>
-          </ul>
-        </nav>
-      </aside>
-      <div className="main">
-        <header className="navbar">
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <div>Daily Tracker</div>
-            <div>
-              {user?.name && <span style={{ marginRight: 12 }}>Hello, {user.name}</span>}
-              <button onClick={handleLogout}>Logout</button>
-            </div>
-          </div>
-        </header>
-        <main className="content">
+    <div className="min-h-screen bg-[#0B0F19] text-white">
+      <Sidebar onLogout={handleLogout} />
+
+      <div className="lg:ml-64">
+        <Navbar onLogout={handleLogout} />
+
+        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />
         </main>
       </div>
