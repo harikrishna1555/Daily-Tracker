@@ -30,6 +30,6 @@
   "devDependencies": {
     "nodemon": "^3.1.14"
     ,"jest": "^29.0.0",
-    "supertest": "^6.4.0"
+    "supertest": "^7.1.4"
   }
 }
