@@ -19,7 +19,7 @@ const dailyLogRoutes = require("./routes/dailyLogRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 app.use(
   cors({
-    origin: "https://daily-tracker-eight-inky.vercel.app",
+    origin: "https://dt3575.vercel.app",
     credentials: true,
   }),
 );
