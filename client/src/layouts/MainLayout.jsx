@@ -3,6 +3,8 @@ import { Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Sidebar from '../components/Sidebar'
 import Navbar from '../components/Navbar'
+import ErrorBoundary from '../components/ErrorBoundary'
+import { useState } from 'react'
 
 export default function MainLayout() {
   const { logout } = useAuth()
@@ -13,17 +15,24 @@ export default function MainLayout() {
     navigate('/login')
   }
 
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-white">
-      <Sidebar onLogout={handleLogout} />
+    <div className="flex h-screen bg-[#0B0F19] text-white">
+      <Sidebar onLogout={handleLogout} open={sidebarOpen} setOpen={setSidebarOpen} />
 
-      <div className="lg:ml-64">
-        <Navbar onLogout={handleLogout} />
+      <div className="flex-1 flex flex-col ml-0 lg:ml-[260px]">
+        <Navbar onLogout={handleLogout} onMenuToggle={() => setSidebarOpen(true)} />
 
-        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="w-full">
+            <ErrorBoundary>
+              <Outlet />
+            </ErrorBoundary>
+          </div>
         </main>
       </div>
     </div>
   )
 }
+

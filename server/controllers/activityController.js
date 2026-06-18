@@ -88,10 +88,13 @@ const getActivitiesByTab = async (req, res) => {
 
 const createNewActivity = async (req, res) => {
   try {
+    console.log("REQ BODY:", req.body);
     const userId = req.user.userId;
-    const { tabId, name, position } = req.body || {};
+    // accept tabId or tab_id from clients
+    const { tabId, tab_id, name, position } = req.body || {};
+    const resolvedTabId = tabId ?? tab_id;
 
-    if (!Number.isInteger(tabId) || tabId <= 0) {
+    if (!Number.isInteger(resolvedTabId) || resolvedTabId <= 0) {
       return res.status(400).json({
         success: false,
         message: "Valid tab id is required",
@@ -118,7 +121,7 @@ const createNewActivity = async (req, res) => {
 
     const activity = await createActivity(
       userId,
-      tabId,
+      resolvedTabId,
       name.trim(),
       Number.isInteger(position) ? position : 0,
     );

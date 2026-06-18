@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import * as authService from '../services/authService'
+import useInactivityLogout from '../hooks/useInactivityLogout'
+import SessionWarning from '../components/SessionWarning'
 
 const AuthContext = createContext(null)
 
@@ -68,6 +70,14 @@ export function AuthProvider({ children }) {
     localStorage.removeItem(STORAGE_KEY)
   }
 
+  // inactivity logout hook: only active when authenticated
+  const { showWarning, timeLeftMs, stayLoggedIn, logoutNow } = useInactivityLogout({
+    isActive: Boolean(accessToken),
+    onLogout: logout,
+    warningMs: 5 * 60 * 1000,
+    inactivityLimitMs: 2 * 60 * 60 * 1000,
+  })
+
   const value = {
     user,
     accessToken,
@@ -79,7 +89,12 @@ export function AuthProvider({ children }) {
     loading,
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <>
+      <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+      <SessionWarning open={showWarning} secondsLeft={Math.floor(timeLeftMs / 1000)} onStay={stayLoggedIn} onLogout={logoutNow} />
+    </>
+  )
 }
 
 export default AuthContext

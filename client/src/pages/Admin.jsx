@@ -4,6 +4,7 @@ import PageHeader from '../components/PageHeader'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorState from '../components/ErrorState'
 import * as adminService from '../services/adminService'
+import { extractArray } from '../utils/apiHelpers'
 
 export default function Admin() {
   const { user } = useAuth()
@@ -19,9 +20,12 @@ export default function Admin() {
       setLoading(true)
       try {
         const [sRes, uRes, lRes] = await Promise.all([adminService.getStats(), adminService.getUsers(), adminService.getAuditLogs()])
+        console.log('Admin stats response:', sRes?.data ?? sRes)
+        console.log('Admin users response:', uRes?.data ?? uRes)
+        console.log('Admin audit logs response:', lRes?.data ?? lRes)
         setStats(sRes.data || {})
-        setUsers(uRes.data || [])
-        setLogs(lRes.data || [])
+        setUsers(extractArray(uRes))
+        setLogs(extractArray(lRes))
       } catch (e) {
         setError('Unable to load admin data')
       } finally {
@@ -50,7 +54,7 @@ export default function Admin() {
         </div>
         <div className="rounded-lg bg-[#1F2937] p-4 text-white">
           <div className="text-sm text-gray-300">Audit Logs</div>
-          <div className="mt-2 text-2xl font-bold">{logs.length}</div>
+          <div className="mt-2 text-2xl font-bold">{Array.isArray(logs) ? logs.length : 0}</div>
         </div>
       </div>
 
@@ -66,7 +70,7 @@ export default function Admin() {
               </tr>
             </thead>
             <tbody>
-              {logs.map((l) => (
+              {(Array.isArray(logs) ? logs : []).map((l) => (
                 <tr key={l.id} className="border-t border-[#111827]">
                   <td className="px-2 py-2 text-gray-300">{l.time || l.created_at}</td>
                   <td className="px-2 py-2">{l.user_name || l.user}</td>

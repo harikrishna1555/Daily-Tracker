@@ -20,6 +20,25 @@ const getTodayLogs = async (userId) => {
   return result.rows;
 };
 
+const getAllLogs = async (userId) => {
+  const result = await pool.query(
+    `
+    SELECT dl.*, a.name AS activity_name
+    FROM daily_logs dl
+    JOIN activities a ON dl.activity_id = a.id
+    JOIN tabs t ON a.tab_id = t.id
+    WHERE dl.user_id = $1
+      AND dl.is_deleted = false
+      AND a.is_deleted = false
+      AND t.is_deleted = false
+    ORDER BY dl.log_date DESC, dl.id
+    `,
+    [userId],
+  );
+
+  return result.rows;
+};
+
 const getLogsByDate = async (userId, date) => {
   const result = await pool.query(
     `
@@ -115,15 +134,43 @@ const updateLog = async (userId, logId, isCompleted) => {
     FROM activities a
     JOIN tabs t ON a.tab_id = t.id
     WHERE dl.activity_id = a.id
-      AND a.id = a.id
-      AND t.user_id = $3
       AND dl.id = $2
+      AND t.user_id = $3
       AND dl.is_deleted = false
       AND a.is_deleted = false
       AND t.is_deleted = false
     RETURNING dl.*
     `,
     [isCompleted, logId, userId],
+  );
+
+  return result.rows[0];
+};
+
+const updateLogByActivityAndDate = async (
+  userId,
+  activityId,
+  logDate,
+  isCompleted,
+) => {
+  const result = await pool.query(
+    `
+    UPDATE daily_logs dl
+    SET is_completed = $1,
+        updated_at = NOW(),
+        updated_by = $4
+    FROM activities a
+    JOIN tabs t ON a.tab_id = t.id
+    WHERE dl.activity_id = a.id
+      AND a.id = $2
+      AND dl.log_date = $3
+      AND t.user_id = $4
+      AND dl.is_deleted = false
+      AND a.is_deleted = false
+      AND t.is_deleted = false
+    RETURNING dl.*
+    `,
+    [isCompleted, activityId, logDate, userId],
   );
 
   return result.rows[0];
@@ -156,8 +203,10 @@ module.exports = {
   getTodayLogs,
   getLogsByDate,
   getLogById,
+  getAllLogs,
   createLog,
   updateLog,
+  updateLogByActivityAndDate,
   softDeleteLog,
   logExists,
 };

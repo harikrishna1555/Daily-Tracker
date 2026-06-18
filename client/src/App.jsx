@@ -11,6 +11,7 @@ import ResetPassword from './pages/ResetPassword'
 import Dashboard from './pages/Dashboard'
 import Tabs from './pages/Tabs'
 import Activities from './pages/Activities'
+import TabDetails from './pages/TabDetails'
 import DailyTracker from './pages/DailyTracker'
 import Reports from './pages/Reports'
 import Admin from './pages/Admin'
@@ -45,10 +46,10 @@ export default function App() {
           }
         />
         <Route
-          path="/activities"
+          path="/tabs/:tabId"
           element={
             <ProtectedRoute>
-              <Activities />
+              <TabDetails />
             </ProtectedRoute>
           }
         />

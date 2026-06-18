@@ -3,6 +3,7 @@ const router = express.Router();
 
 const {
   getTodayLogs,
+  getDailyLogs,
   getLogsByDate,
   getDailyLogById,
   createDailyLog,
@@ -13,6 +14,7 @@ const {
 const { authenticate } = require("../middleware/authMiddleware");
 
 router.get("/today", authenticate, getTodayLogs);
+router.get("/", authenticate, getDailyLogs);
 router.get("/date/:date", authenticate, getLogsByDate);
 router.get("/:id", authenticate, getDailyLogById);
 router.post("/", authenticate, createDailyLog);

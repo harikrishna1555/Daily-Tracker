@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react'
 import * as activityService from '../services/activityService'
 import * as tabService from '../services/tabService'
+import { extractArray } from '../utils/apiHelpers'
 import PageHeader from '../components/PageHeader'
 import Modal from '../components/Modal'
 import ConfirmModal from '../components/ConfirmModal'
 import LoadingSpinner from '../components/LoadingSpinner'
 import EmptyState from '../components/EmptyState'
 import { toast } from 'react-toastify'
+import { useNotifications } from '../context/NotificationContext'
 
 export default function Activities() {
+  const { addNotification } = useNotifications()
   const [activities, setActivities] = useState([])
   const [tabs, setTabs] = useState([])
   const [loading, setLoading] = useState(false)
@@ -24,8 +27,10 @@ export default function Activities() {
     setLoading(true)
     try {
       const [aRes, tRes] = await Promise.all([activityService.getActivities(), tabService.getTabs()])
-      setActivities(aRes.data || [])
-      setTabs(tRes.data || [])
+      console.log('Activities API Response:', aRes?.data ?? aRes)
+      console.log('Tabs API Response:', tRes?.data ?? tRes)
+      setActivities(extractArray(aRes))
+      setTabs(extractArray(tRes))
     } catch (e) {
       toast.error('Unable to load activities')
     } finally {
@@ -54,10 +59,10 @@ export default function Activities() {
     try {
       if (editing) {
         await activityService.updateActivity(editing.id, form)
-        toast.success('Activity updated')
+        addNotification('Activity updated', 'success')
       } else {
         await activityService.createActivity(form)
-        toast.success('Activity created')
+        addNotification('Activity created', 'success')
       }
       setFormOpen(false)
       load()
@@ -75,7 +80,7 @@ export default function Activities() {
     if (!deleting) return
     try {
       await activityService.deleteActivity(deleting.id)
-      toast.success('Activity deleted')
+      addNotification('Activity deleted', 'success')
       setConfirmOpen(false)
       setDeleting(null)
       load()
@@ -84,8 +89,12 @@ export default function Activities() {
     }
   }
 
+  // Defensive safe arrays
+  const safeTabs = Array.isArray(tabs) ? tabs : []
+  const safeActivities = Array.isArray(activities) ? activities : []
+
   // Group activities by tab
-  const grouped = tabs.map((t) => ({ tab: t, activities: activities.filter((a) => a.tab_id === t.id) }))
+  const grouped = safeTabs.map((t) => ({ tab: t, activities: safeActivities.filter((a) => a.tab_id === t.id) }))
 
   return (
     <div>
@@ -131,7 +140,7 @@ export default function Activities() {
             <label className="block text-sm text-gray-300">Tab</label>
             <select required value={form.tab_id} onChange={(e) => setForm((s) => ({ ...s, tab_id: e.target.value }))} className="mt-1 w-full rounded-md bg-[#0B0F19] border border-[#1F2937] px-3 py-2 text-white">
               <option value="">Select tab</option>
-              {tabs.map((t) => (
+              {safeTabs.map((t) => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>

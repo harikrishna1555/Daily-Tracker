@@ -13,6 +13,7 @@ const {
 const { authenticate } = require("../middleware/authMiddleware");
 
 router.get("/", authenticate, getActivities);
+router.get("/tab/:tabId", authenticate, getActivitiesByTab);
 router.get("/:id", authenticate, getActivity);
 router.get("/tabs/:tabId/activities", authenticate, getActivitiesByTab);
 router.post("/", authenticate, createNewActivity);

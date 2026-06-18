@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^powershell -Command \"\\$body = @\\{activity_id=1; is_completed=\\$false\\}; \\$json = \\$body \\| ConvertTo-Json -Compress; Invoke-RestMethod -Uri 'http://localhost:5000/api/logs' -Method Post -Headers @\\{'Authorization'='Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\\.eyJ1c2VySWQiOjMsImVtYWlsIjoiYWxnb2JveHBsYXRmb3JtQGdtYWlsLmNvbSIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzgxNzkwNTg2LCJleHAiOjE3ODE3OTE0ODZ9\\.SY2nVHxEqGgyiH6i7yJ7kXqv4L-kN_icrSCVCEP4Rgw'\\} -Body \\$json -ContentType 'application/json' \\| ConvertTo-Json -Compress\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
