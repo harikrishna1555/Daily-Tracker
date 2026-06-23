@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const baseURL = "https://daily-tracker-cf8u.onrender.com/api";
+const baseURL =
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://daily-tracker-cf8u.onrender.com/api";
 
 const api = axios.create({
   baseURL,
